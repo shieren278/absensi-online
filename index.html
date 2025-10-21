@@ -82,6 +82,16 @@
             animation: rotation 1s linear infinite;
             margin-right: 8px;
         }
+        .tab-btn.active {
+            background-color: #800000;
+            color: white;
+        }
+        .tab-content {
+            display: none;
+        }
+        .tab-content.active {
+            display: block;
+        }
         @keyframes rotation {
             0% { transform: rotate(0deg); }
             100% { transform: rotate(360deg); }
@@ -249,9 +259,10 @@
                                 <tr>
                                     <th class="px-6 py-3">Nama Siswa</th>
                                     <th class="px-6 py-3">Status Hari Ini</th>
+                                    <th class="px-6 py-3">Bukti Foto</th>
                                 </tr>
                             </thead>
-                            <tbody id="daftarHadirSiswa"><tr class="bg-white"><td colspan="2" class="text-center p-4">Memuat daftar siswa...</td></tr></tbody>
+                            <tbody id="daftarHadirSiswa"><tr class="bg-white"><td colspan="3" class="text-center p-4">Memuat daftar siswa...</td></tr></tbody>
                         </table>
                     </div>
                 </div>
@@ -287,12 +298,61 @@
                      </div>
                 </div>
                  <div class="card p-6">
-                    <h3 class="text-lg font-bold mb-4">Rekap Laporan Bulanan 📂</h3>
-                     <p class="text-sm text-slate-500 mb-4">Fitur ini akan segera tersedia.</p>
-                     <div class="flex gap-4">
-                         <button class="btn bg-red-600 text-white flex-1 hover:bg-red-700" disabled><i class="fa fa-file-pdf mr-2"></i>Download PDF</button>
-                         <button class="btn bg-green-600 text-white flex-1 hover:bg-green-700" disabled><i class="fa fa-file-excel mr-2"></i>Download Excel</button>
-                     </div>
+                    <h3 class="text-lg font-bold mb-4">Monitoring Detail Absensi Siswa</h3>
+                    <div>
+                        <label for="adminKelasSelect" class="block text-sm font-medium text-slate-600 mb-2">Pilih Kelas untuk Ditampilkan</label>
+                        <select id="adminKelasSelect" class="input-field bg-white mb-4"><option>Memuat kelas...</option></select>
+                    </div>
+                     <div class="overflow-x-auto">
+                        <table class="w-full text-sm text-left">
+                            <thead class="bg-slate-50 text-xs text-slate-700 uppercase">
+                                <tr>
+                                    <th class="px-6 py-3">Nama Siswa</th>
+                                    <th class="px-6 py-3">Status</th>
+                                    <th class="px-6 py-3">Bukti Foto</th>
+                                </tr>
+                            </thead>
+                            <tbody id="adminDaftarHadirSiswa"><tr class="bg-white"><td colspan="3" class="text-center p-4 text-slate-500">Silakan pilih kelas terlebih dahulu.</td></tr></tbody>
+                        </table>
+                    </div>
+                 </div>
+                 <div class="card p-6">
+                    <h3 class="text-lg font-bold mb-4">Monitoring Absensi Guru Hari Ini 🧑‍🏫</h3>
+                    <div id="admin-guru-attendance-list" class="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-4">
+                        <p class="col-span-full text-center text-slate-500">Memuat data absensi guru...</p>
+                    </div>
+                 </div>
+                 <div class="card p-6">
+                    <h3 class="text-lg font-bold mb-4">Manajemen Data 🗃️</h3>
+                    <!-- Tabs -->
+                    <div class="border-b border-slate-200 mb-4">
+                        <nav class="-mb-px flex space-x-4" aria-label="Tabs">
+                            <button class="tab-btn active whitespace-nowrap py-3 px-4 border-b-2 font-medium text-sm border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300" data-tab="siswa">Manajemen Siswa</button>
+                            <button class="tab-btn whitespace-nowrap py-3 px-4 border-b-2 font-medium text-sm border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300" data-tab="guru">Manajemen Guru</button>
+                        </nav>
+                    </div>
+                    <!-- Tab Content -->
+                    <div id="manajemen-siswa-content" class="tab-content active">
+                        <form id="addSiswaForm" class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6 p-4 bg-slate-50 rounded-lg">
+                            <input type="text" id="newSiswaName" placeholder="Nama Siswa Baru" class="input-field sm:col-span-2" required>
+                            <input type="text" id="newSiswaKelas" placeholder="Contoh: Kelas 12 A" class="input-field">
+                            <button type="submit" class="btn btn-primary sm:col-span-3"><i class="fa fa-plus mr-2"></i>Tambah Siswa</button>
+                        </form>
+                        <div class="max-h-60 overflow-y-auto">
+                            <table class="w-full text-sm text-left"><tbody id="siswa-management-table"></tbody></table>
+                        </div>
+                    </div>
+                    <div id="manajemen-guru-content" class="tab-content">
+                        <form id="addGuruForm" class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6 p-4 bg-slate-50 rounded-lg">
+                             <input type="text" id="newGuruName" placeholder="Nama Guru Baru" class="input-field" required>
+                             <input type="text" id="newGuruKelas" placeholder="Kelas Wali (Contoh: Kelas 12 A)" class="input-field">
+                             <input type="text" id="newGuruMapel" placeholder="Mata Pelajaran" class="input-field sm:col-span-2">
+                             <button type="submit" class="btn btn-primary sm:col-span-2"><i class="fa fa-plus mr-2"></i>Tambah Guru</button>
+                        </form>
+                         <div class="max-h-60 overflow-y-auto">
+                            <table class="w-full text-sm text-left"><tbody id="guru-management-table"></tbody></table>
+                        </div>
+                    </div>
                  </div>
             </div>
             <div class="space-y-6">
@@ -310,9 +370,23 @@
     <div id="custom-alert" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
         <div class="bg-white rounded-lg p-6 w-full max-w-sm text-center card">
             <p id="alert-message" class="mb-4 text-slate-700"></p>
-            <button id="alert-ok-btn" class="btn btn-primary px-8">OK</button>
+            <div id="alert-buttons">
+                <button id="alert-ok-btn" class="btn btn-primary px-8">OK</button>
+            </div>
         </div>
     </div>
+
+    <div id="edit-modal" class="hidden fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50 p-4">
+        <div class="bg-white rounded-lg p-6 w-full max-w-md card">
+             <h3 id="edit-modal-title" class="text-lg font-bold mb-4">Edit Data</h3>
+             <form id="edit-form" class="space-y-4"></form>
+             <div class="mt-6 flex justify-end gap-3">
+                 <button id="edit-cancel-btn" class="btn bg-slate-200 text-slate-700">Batal</button>
+                 <button id="edit-save-btn" class="btn btn-primary">Simpan Perubahan</button>
+             </div>
+        </div>
+    </div>
+
 
     <div id="camera-modal" class="hidden fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-40 p-4">
         <div class="bg-white rounded-lg p-6 w-full max-w-md card relative">
@@ -357,15 +431,90 @@
         const kelasSelect = document.getElementById('kelasSelect'), userNameSelect = document.getElementById('userName'), guruNameSelect = document.getElementById('guruName');
         const loginBtn = document.getElementById('loginBtn'), logoutBtn = document.getElementById('logoutBtn');
         const dashboardContent = document.getElementById('dashboardContent'), welcomeMessage = document.getElementById('welcomeMessage');
-        const customAlert = document.getElementById('custom-alert'), alertMessage = document.getElementById('alert-message'), alertOkBtn = document.getElementById('alert-ok-btn');
+        const customAlert = document.getElementById('custom-alert'), alertMessage = document.getElementById('alert-message'), alertOkBtn = document.getElementById('alert-ok-btn'), alertButtons = document.getElementById('alert-buttons');
+        const editModal = document.getElementById('edit-modal'), editModalTitle = document.getElementById('edit-modal-title'), editForm = document.getElementById('edit-form'), editCancelBtn = document.getElementById('edit-cancel-btn'), editSaveBtn = document.getElementById('edit-save-btn');
         const cameraModal = document.getElementById('camera-modal'), closeCameraBtn = document.getElementById('close-camera-btn'), cameraFeed = document.getElementById('camera-feed'), cameraCanvas = document.getElementById('camera-canvas'), captureBtn = document.getElementById('capture-btn'), photoPreview = document.getElementById('photo-preview'), recaptureBtn = document.getElementById('recapture-btn'), confirmPhotoBtn = document.getElementById('confirm-photo-btn');
         
         let stream;
         let currentUser = {};
+        let currentEditData = {};
+
+        // --- DATA SEEDING (RUNS ONCE IF DB IS EMPTY) ---
+        const seedInitialData = async () => {
+            console.log("Checking if initial data seeding is needed...");
+            
+            // Seed Gurus
+            const { count: guruCount } = await supabaseClient.from('guru').select('*', { count: 'exact', head: true });
+            if (guruCount === 0) {
+                console.log("No teachers found, seeding teacher data...");
+                const teachers = [
+                    { name: 'Drs. Budi Santoso, M.Pd.', kelas: 'Kelas 12 A', mapel: 'Matematika' },
+                    { name: 'Dra. Siti Aminah, S.Pd.', kelas: 'Kelas 12 B', mapel: 'Bahasa Indonesia' },
+                    { name: 'Ahmad Fauzi, S.Kom.', kelas: 'Kelas 12 C', mapel: 'Fisika' },
+                    { name: 'Dewi Lestari, S.S.', kelas: 'Kelas 12 D', mapel: 'Bahasa Inggris' },
+                    { name: 'Eko Prasetyo, S.Pd.', kelas: 'Kelas 12 E', mapel: 'Kimia' },
+                    { name: 'Fitriani, S.Ag.', kelas: 'Kelas 12 F', mapel: 'Pendidikan Agama' },
+                    { name: 'Gunawan, S.Or.', kelas: 'Kelas 12 G', mapel: 'Olahraga' },
+                    { name: 'Herlina, S.Pd., M.Si.', kelas: 'Kelas 12 H', mapel: 'Biologi' },
+                    { name: 'Indra Wijaya, S.E.', kelas: 'Kelas 12 I', mapel: 'Ekonomi' },
+                    { name: 'Joko Susilo, S.Pd.', kelas: 'Kelas 12 J', mapel: 'Sejarah' },
+                    { name: 'Kartika Sari, S.Sn.', kelas: 'Kelas 12 K', mapel: 'Seni Budaya' },
+                    { name: 'Linda Purnamasari, S.T.', kelas: 'Kelas 12 L', mapel: 'TIK' },
+                ];
+                const { error } = await supabaseClient.from('guru').insert(teachers);
+                if (error) console.error("Error seeding teachers:", error);
+                else console.log("Teacher data seeded successfully.");
+            }
+
+            // Seed Siswa
+            const { count: siswaCount } = await supabaseClient.from('siswa').select('*', { count: 'exact', head: true });
+            if (siswaCount === 0) {
+                console.log("No students found, seeding student data...");
+                const firstNames = ["Adinda", "Bayu", "Citra", "Dimas", "Eka", "Fajar", "Gita", "Hafiz", "Indah", "Joko", "Kevin", "Lestari", "Muhammad", "Novita", "Oscar", "Putri", "Rama", "Shinta", "Toni", "Umi"];
+                const lastNames = ["Putri", "Aji", "Kirana", "Anggara", "Yulianti", "Nugroho", "Permata", "Maulana", "Sari", "Widodo", "Sanjaya", "Wulandari", "Rizky", "Ramadhani", "Wijaya", "Ayu", "Dhani", "Bella", "Firmansyah", "Kalsum"];
+                const students = [];
+                const kelasHuruf = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L'];
+                
+                kelasHuruf.forEach(h => {
+                    const namaKelas = `Kelas 12 ${h}`;
+                    for(let i=0; i<10; i++){
+                        const randomFirstName = firstNames[Math.floor(Math.random() * firstNames.length)];
+                        const randomLastName = lastNames[Math.floor(Math.random() * lastNames.length)];
+                        // ensure unique name
+                        const studentName = `${randomFirstName} ${randomLastName} ${i+1}`;
+                        students.push({ name: studentName, kelas: namaKelas });
+                    }
+                });
+                const { error } = await supabaseClient.from('siswa').insert(students);
+                if (error) console.error("Error seeding students:", error);
+                else console.log("Student data for 12 classes seeded successfully.");
+            }
+        };
 
         // --- HELPER FUNCTIONS ---
-        const showAlert = (message) => { alertMessage.textContent = message; customAlert.classList.remove('hidden'); };
-        alertOkBtn.addEventListener('click', () => customAlert.classList.add('hidden'));
+        const showAlert = (message) => {
+            alertMessage.textContent = message;
+            alertButtons.innerHTML = `<button id="alert-ok-btn" class="btn btn-primary px-8">OK</button>`;
+            document.getElementById('alert-ok-btn').addEventListener('click', () => customAlert.classList.add('hidden'));
+            customAlert.classList.remove('hidden');
+        };
+
+        const showConfirmation = (message, callback) => {
+            alertMessage.textContent = message;
+            alertButtons.innerHTML = `
+                <button id="confirm-cancel" class="btn bg-slate-200 text-slate-700">Batal</button>
+                <button id="confirm-ok" class="btn bg-red-600 text-white">Ya, Hapus</button>
+            `;
+            customAlert.classList.remove('hidden');
+            document.getElementById('confirm-ok').onclick = () => {
+                customAlert.classList.add('hidden');
+                callback(true);
+            };
+             document.getElementById('confirm-cancel').onclick = () => {
+                customAlert.classList.add('hidden');
+                callback(false);
+            };
+        };
 
         const showLoader = (btn) => {
             btn.disabled = true;
@@ -385,7 +534,7 @@
             if (error) return console.error("Gagal mengambil data kelas:", error);
             
             const kelasSet = new Set(data.map(s => s.kelas));
-            const sortedKelas = Array.from(kelasSet).sort((a, b) => parseInt(a.split('-')[1]) - parseInt(b.split('-')[1]));
+            const sortedKelas = Array.from(kelasSet).sort((a, b) => a.localeCompare(b, undefined, {numeric: true}));
             
             if (sortedKelas.length === 0) {
                  kelasSelect.innerHTML = `<option>Belum ada data</option>`;
@@ -407,6 +556,24 @@
             userNameSelect.innerHTML = data.map(s => `<option value="${s.name}">${s.name}</option>`).join('');
         };
         
+        const populateKelasSelectForAdmin = async () => {
+            const adminKelasSelect = document.getElementById('adminKelasSelect');
+            if (!adminKelasSelect) return;
+
+            const { data, error } = await supabaseClient.from('siswa').select('kelas');
+            if (error) return console.error("Gagal mengambil data kelas untuk admin:", error);
+            
+            const kelasSet = new Set(data.map(s => s.kelas));
+            const sortedKelas = Array.from(kelasSet).sort((a, b) => a.localeCompare(b, undefined, {numeric: true}));
+            
+            if (sortedKelas.length === 0) {
+                 adminKelasSelect.innerHTML = `<option>Belum ada data</option>`;
+                 return;
+            }
+            
+            adminKelasSelect.innerHTML = `<option value="">-- Pilih Kelas --</option>` + sortedKelas.map(k => `<option value="${k}">${k}</option>`).join('');
+        };
+
         const populateGuruSelect = async () => {
             const { data, error } = await supabaseClient.from('guru').select('name, kelas');
             if (error) return console.error("Gagal mengambil data guru:", error);
@@ -571,7 +738,7 @@
                 absensiStatusGuru.textContent = 'Status: Belum Absen';
                 absensiStatusGuru.className = 'font-bold text-xl p-3 rounded-lg bg-slate-100';
             }
-            renderDaftarHadir(currentUser.guruData.kelas);
+            renderDaftarHadir(currentUser.guruData.kelas, 'daftarHadirSiswa', 'rekap-kelas-content');
         };
 
         const setupAdminDashboard = async () => {
@@ -599,37 +766,56 @@
             
             await fetchStats();
             await renderIzinListForAdmin();
+            await renderGuruAttendanceForAdmin();
+            await populateKelasSelectForAdmin();
+            await setupManajemenData();
 
-            // Real-time subscription for izin list
+            const adminKelasSelect = document.getElementById('adminKelasSelect');
+            adminKelasSelect.addEventListener('change', (e) => {
+                const kelas = e.target.value;
+                if (kelas) {
+                    renderDaftarHadir(kelas, 'adminDaftarHadirSiswa');
+                } else {
+                    document.getElementById('adminDaftarHadirSiswa').innerHTML = `<tr class="bg-white"><td colspan="3" class="text-center p-4 text-slate-500">Silakan pilih kelas terlebih dahulu.</td></tr>`;
+                }
+            });
+
+            // Real-time subscriptions
             supabaseClient.channel('public:izin')
-                .on('postgres_changes', { event: '*', schema: 'public', table: 'izin' }, payload => {
-                    console.log('Perubahan data izin terdeteksi!', payload);
-                    renderIzinListForAdmin(); // Re-render the list
-                    fetchStats(); // Update stats as well
+                .on('postgres_changes', { event: '*', schema: 'public', table: 'izin' }, () => { renderIzinListForAdmin(); fetchStats(); })
+                .subscribe();
+            
+            supabaseClient.channel('public:absensi')
+                .on('postgres_changes', { event: '*', schema: 'public', table: 'absensi' }, payload => {
+                    if (payload.new.user_role === 'guru') {
+                        renderGuruAttendanceForAdmin();
+                        fetchStats();
+                    }
                 })
                 .subscribe();
         };
 
-        const renderDaftarHadir = async (kelas) => {
-            const tableBody = document.getElementById('daftarHadirSiswa');
-            tableBody.innerHTML = '<tr><td colspan="2" class="text-center p-4">Memuat data...</td></tr>';
+        const renderDaftarHadir = async (kelas, tableBodyId, rekapContainerId = null) => {
+            const tableBody = document.getElementById(tableBodyId);
+            tableBody.innerHTML = `<tr><td colspan="3" class="text-center p-4">Memuat data...</td></tr>`;
             
             // Get all students in the class
             const { data: siswaDiKelas, error: siswaError } = await supabaseClient.from('siswa').select('name').eq('kelas', kelas);
-            if(siswaError) return tableBody.innerHTML = '<tr><td colspan="2" class="text-center p-4 text-red-500">Gagal memuat siswa.</td></tr>';
+            if(siswaError) return tableBody.innerHTML = `<tr><td colspan="3" class="text-center p-4 text-red-500">Gagal memuat siswa.</td></tr>`;
 
             // Get all attendance and izin data for today
             const today = getTodayDate();
-            const { data: absensiHariIni, error: absensiError } = await supabaseClient.from('absensi').select('user_name, type').eq('attendance_date', today);
+            const { data: absensiHariIni, error: absensiError } = await supabaseClient.from('absensi').select('user_name, type, photo_url').eq('attendance_date', today);
             const { data: izinHariIni, error: izinError } = await supabaseClient.from('izin').select('siswa_name, type, status').eq('created_at', today);
 
-            if (!siswaDiKelas) return;
+            if (!siswaDiKelas) return tableBody.innerHTML = `<tr><td colspan="3" class="text-center p-4">Tidak ada siswa di kelas ini.</td></tr>`;
 
             let rekap = { Hadir: 0, 'Izin/Sakit': 0, Alpa: siswaDiKelas.length };
             
             tableBody.innerHTML = ''; // Clear table
-            siswaDiKelas.forEach(siswa => {
+            for (const siswa of siswaDiKelas) {
                 const absenMasuk = absensiHariIni?.find(a => a.user_name === siswa.name && a.type === 'masuk');
+                const absenPulang = absensiHariIni?.find(a => a.user_name === siswa.name && a.type === 'pulang');
                 const izinDisetujui = izinHariIni?.find(i => i.siswa_name === siswa.name && i.status === 'disetujui');
                 
                 let statusHtml = '';
@@ -645,22 +831,37 @@
                     statusHtml = `<span class="px-2 py-1 text-xs font-medium rounded-full bg-red-100 text-red-800">Alpa</span>`;
                 }
 
+                const photoMasukUrl = absenMasuk?.photo_url || 'https://placehold.co/40x40/e2e8f0/475569?text=M';
+                const photoPulangUrl = absenPulang?.photo_url || 'https://placehold.co/40x40/e2e8f0/475569?text=P';
+
                 const row = document.createElement('tr');
                 row.className = "bg-white border-b";
                 row.innerHTML = `
                     <td class="px-6 py-4 font-medium">${siswa.name}</td>
                     <td class="px-6 py-4">${statusHtml}</td>
+                    <td class="px-6 py-4">
+                        <div class="flex items-center gap-2">
+                             <a href="${photoMasukUrl}" target="_blank" title="Foto Masuk">
+                                <img src="${photoMasukUrl}" class="w-10 h-10 rounded-md object-cover border-2 border-slate-200 hover:border-maroon-800 transition">
+                             </a>
+                             <a href="${photoPulangUrl}" target="_blank" title="Foto Pulang">
+                                <img src="${photoPulangUrl}" class="w-10 h-10 rounded-md object-cover border-2 border-slate-200 hover:border-maroon-800 transition">
+                             </a>
+                        </div>
+                    </td>
                 `;
                 tableBody.appendChild(row);
-            });
+            }
             
-            // Render Rekap Kelas
-            const rekapContainer = document.getElementById('rekap-kelas-content');
-            rekapContainer.innerHTML = `
-                <div class="bg-green-100 p-3 rounded-lg"><p class="font-bold text-green-800 text-xl">${rekap.Hadir}</p><p class="text-xs text-green-600 font-medium">Hadir</p></div>
-                <div class="bg-yellow-100 p-3 rounded-lg"><p class="font-bold text-yellow-800 text-xl">${rekap['Izin/Sakit']}</p><p class="text-xs text-yellow-600 font-medium">Izin/Sakit</p></div>
-                <div class="bg-red-100 p-3 rounded-lg"><p class="font-bold text-red-800 text-xl">${rekap.Alpa}</p><p class="text-xs text-red-600 font-medium">Alpa</p></div>
-            `;
+            // Render Rekap Kelas if container exists
+            if (rekapContainerId) {
+                const rekapContainer = document.getElementById(rekapContainerId);
+                rekapContainer.innerHTML = `
+                    <div class="bg-green-100 p-3 rounded-lg"><p class="font-bold text-green-800 text-xl">${rekap.Hadir}</p><p class="text-xs text-green-600 font-medium">Hadir</p></div>
+                    <div class="bg-yellow-100 p-3 rounded-lg"><p class="font-bold text-yellow-800 text-xl">${rekap['Izin/Sakit']}</p><p class="text-xs text-yellow-600 font-medium">Izin/Sakit</p></div>
+                    <div class="bg-red-100 p-3 rounded-lg"><p class="font-bold text-red-800 text-xl">${rekap.Alpa}</p><p class="text-xs text-red-600 font-medium">Alpa</p></div>
+                `;
+            }
         };
         
         const renderIzinListForAdmin = async () => {
@@ -690,6 +891,36 @@
                 container.innerHTML = `<p class="text-sm text-slate-500 text-center py-4">Tidak ada pengajuan izin saat ini. 🎉</p>`;
             }
         };
+        
+        const renderGuruAttendanceForAdmin = async () => {
+            const container = document.getElementById('admin-guru-attendance-list');
+            if (!container) return;
+            
+            const { data, error } = await supabaseClient.from('absensi').select('user_name, photo_url')
+                .eq('attendance_date', getTodayDate())
+                .eq('user_role', 'guru')
+                .eq('type', 'masuk');
+
+            if (error) {
+                container.innerHTML = `<p class="col-span-full text-center text-red-500">Gagal memuat data guru.</p>`;
+                return;
+            }
+
+            if (data.length === 0) {
+                container.innerHTML = `<p class="col-span-full text-center text-slate-500">Belum ada guru yang absen hari ini.</p>`;
+                return;
+            }
+
+            container.innerHTML = data.map(guru => `
+                <div class="text-center">
+                    <a href="${guru.photo_url}" target="_blank">
+                        <img src="${guru.photo_url}" class="w-24 h-24 rounded-lg object-cover border-2 border-slate-200 hover:border-maroon-800 transition mx-auto" alt="Foto absen ${guru.user_name}">
+                    </a>
+                    <p class="text-xs font-semibold mt-1 text-slate-700">${guru.user_name.split(',')[0]}</p>
+                </div>
+            `).join('');
+        };
+
 
         const handleKonfirmasiIzin = async (e) => {
             const btn = e.target;
@@ -706,6 +937,173 @@
                 // The real-time subscription will handle re-rendering automatically
             }
         };
+        
+        // --- MANAJEMEN DATA (ADMIN) ---
+        const setupManajemenData = async () => {
+            const tabs = document.querySelectorAll('.tab-btn');
+            const tabContents = document.querySelectorAll('.tab-content');
+            
+            tabs.forEach(tab => {
+                tab.addEventListener('click', () => {
+                    tabs.forEach(t => t.classList.remove('active'));
+                    tab.classList.add('active');
+                    tabContents.forEach(c => c.classList.remove('active'));
+                    document.getElementById(`manajemen-${tab.dataset.tab}-content`).classList.add('active');
+                });
+            });
+
+            // Siswa Management
+            const addSiswaForm = document.getElementById('addSiswaForm');
+            addSiswaForm.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const btn = e.target.querySelector('button');
+                const originalText = btn.innerHTML;
+                showLoader(btn);
+                const name = document.getElementById('newSiswaName').value;
+                const kelas = document.getElementById('newSiswaKelas').value;
+                const { error } = await supabaseClient.from('siswa').insert({ name, kelas });
+                hideLoader(btn, originalText);
+                if (error) showAlert('Gagal menambah siswa: ' + error.message);
+                else {
+                    showAlert('Siswa berhasil ditambahkan!');
+                    addSiswaForm.reset();
+                    // Real-time will update the table
+                }
+            });
+
+            // Guru Management
+            const addGuruForm = document.getElementById('addGuruForm');
+            addGuruForm.addEventListener('submit', async(e) => {
+                e.preventDefault();
+                const btn = e.target.querySelector('button');
+                const originalText = btn.innerHTML;
+                showLoader(btn);
+                const name = document.getElementById('newGuruName').value;
+                const kelas = document.getElementById('newGuruKelas').value;
+                const mapel = document.getElementById('newGuruMapel').value;
+                const { error } = await supabaseClient.from('guru').insert({ name, kelas, mapel });
+                hideLoader(btn, originalText);
+                if (error) showAlert('Gagal menambah guru: ' + error.message);
+                else {
+                    showAlert('Guru berhasil ditambahkan!');
+                    addGuruForm.reset();
+                }
+            });
+            
+            renderSiswaManagementTable();
+            renderGuruManagementTable();
+            
+            // Listen to changes
+            supabaseClient.channel('public:siswa').on('postgres_changes', { event: '*', schema: 'public', table: 'siswa' }, renderSiswaManagementTable).subscribe();
+            supabaseClient.channel('public:guru').on('postgres_changes', { event: '*', schema: 'public', table: 'guru' }, renderGuruManagementTable).subscribe();
+        };
+
+        const renderSiswaManagementTable = async () => {
+            const tableBody = document.getElementById('siswa-management-table');
+            const { data, error } = await supabaseClient.from('siswa').select('*');
+            if(error) return tableBody.innerHTML = '<tr><td class="text-red-500">Gagal memuat</td></tr>';
+            tableBody.innerHTML = data.map(siswa => `
+                <tr class="border-b">
+                    <td class="p-2 font-medium">${siswa.name}</td>
+                    <td class="p-2 text-slate-600">${siswa.kelas}</td>
+                    <td class="p-2 text-right">
+                        <button class="edit-btn text-blue-600 hover:text-blue-800 mr-2" data-type="siswa" data-id="${siswa.id}"><i class="fa fa-edit"></i></button>
+                        <button class="delete-btn text-red-600 hover:text-red-800" data-type="siswa" data-id="${siswa.id}"><i class="fa fa-trash"></i></button>
+                    </td>
+                </tr>
+            `).join('');
+            
+            tableBody.querySelectorAll('.edit-btn').forEach(btn => btn.addEventListener('click', handleEdit));
+            tableBody.querySelectorAll('.delete-btn').forEach(btn => btn.addEventListener('click', handleDelete));
+        };
+        
+        const renderGuruManagementTable = async () => {
+             const tableBody = document.getElementById('guru-management-table');
+            const { data, error } = await supabaseClient.from('guru').select('*');
+            if(error) return tableBody.innerHTML = '<tr><td class="text-red-500">Gagal memuat</td></tr>';
+            tableBody.innerHTML = data.map(guru => `
+                <tr class="border-b">
+                    <td class="p-2 font-medium">${guru.name}</td>
+                    <td class="p-2 text-slate-600">${guru.kelas} / ${guru.mapel}</td>
+                    <td class="p-2 text-right">
+                        <button class="edit-btn text-blue-600 hover:text-blue-800 mr-2" data-type="guru" data-id="${guru.id}"><i class="fa fa-edit"></i></button>
+                        <button class="delete-btn text-red-600 hover:text-red-800" data-type="guru" data-id="${guru.id}"><i class="fa fa-trash"></i></button>
+                    </td>
+                </tr>
+            `).join('');
+            
+            tableBody.querySelectorAll('.edit-btn').forEach(btn => btn.addEventListener('click', handleEdit));
+            tableBody.querySelectorAll('.delete-btn').forEach(btn => btn.addEventListener('click', handleDelete));
+        };
+        
+        const handleEdit = async (e) => {
+            const btn = e.currentTarget;
+            const type = btn.dataset.type;
+            const id = btn.dataset.id;
+            
+            const { data, error } = await supabaseClient.from(type).select('*').eq('id', id).single();
+            if (error) return showAlert('Gagal mengambil data untuk diedit.');
+
+            currentEditData = { type, id, data };
+            editModalTitle.textContent = `Edit Data ${type.charAt(0).toUpperCase() + type.slice(1)}`;
+
+            if (type === 'siswa') {
+                editForm.innerHTML = `
+                    <div><label class="block text-sm">Nama Siswa</label><input type="text" id="edit-name" class="input-field" value="${data.name}"></div>
+                    <div><label class="block text-sm">Kelas</label><input type="text" id="edit-kelas" class="input-field" value="${data.kelas}"></div>
+                `;
+            } else if (type === 'guru') {
+                editForm.innerHTML = `
+                    <div><label class="block text-sm">Nama Guru</label><input type="text" id="edit-name" class="input-field" value="${data.name}"></div>
+                    <div><label class="block text-sm">Kelas Wali</label><input type="text" id="edit-kelas" class="input-field" value="${data.kelas}"></div>
+                    <div><label class="block text-sm">Mata Pelajaran</label><input type="text" id="edit-mapel" class="input-field" value="${data.mapel}"></div>
+                `;
+            }
+
+            editModal.classList.remove('hidden');
+        };
+
+        const handleDelete = (e) => {
+            const btn = e.currentTarget;
+            const type = btn.dataset.type; // 'siswa' or 'guru'
+            const id = btn.dataset.id;
+            
+            showConfirmation(`Anda yakin ingin menghapus data ${type} ini? Tindakan ini tidak dapat dibatalkan.`, async (isConfirmed) => {
+                if(isConfirmed) {
+                     const { error } = await supabaseClient.from(type).delete().eq('id', id);
+                     if (error) showAlert(`Gagal menghapus: ${error.message}`);
+                     else showAlert(`Data ${type} berhasil dihapus.`);
+                }
+            });
+        };
+
+        editSaveBtn.addEventListener('click', async () => {
+            const { type, id } = currentEditData;
+            let updatedData = {};
+            
+            if (type === 'siswa') {
+                updatedData = {
+                    name: document.getElementById('edit-name').value,
+                    kelas: document.getElementById('edit-kelas').value
+                };
+            } else if (type === 'guru') {
+                 updatedData = {
+                    name: document.getElementById('edit-name').value,
+                    kelas: document.getElementById('edit-kelas').value,
+                    mapel: document.getElementById('edit-mapel').value
+                };
+            }
+
+            const { error } = await supabaseClient.from(type).update(updatedData).eq('id', id);
+            if (error) {
+                showAlert('Gagal menyimpan perubahan: ' + error.message);
+            } else {
+                showAlert('Data berhasil diperbarui!');
+                editModal.classList.add('hidden');
+            }
+        });
+        editCancelBtn.addEventListener('click', () => editModal.classList.add('hidden'));
+
 
         // --- CAMERA LOGIC ---
         let currentAbsenType = '';
@@ -819,6 +1217,7 @@
         });
 
         // --- INITIALIZATION ---
+        await seedInitialData();
         switchRoleView('siswa');
     });
     </script>
