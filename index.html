@@ -7,8 +7,15 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
     <!-- Supabase Client Library -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    
+    <!-- PDF & Excel Export Libraries -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.1/jspdf.plugin.autotable.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+
     <style>
         body {
             font-family: 'Inter', sans-serif;
@@ -92,6 +99,15 @@
         .tab-content.active {
             display: block;
         }
+        /* Style untuk rekap harian yang bisa diklik */
+        .rekap-harian-btn {
+            cursor: pointer;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+        .rekap-harian-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+        }
         @keyframes rotation {
             0% { transform: rotate(0deg); }
             100% { transform: rotate(360deg); }
@@ -116,7 +132,7 @@
                         <label for="role" class="block text-sm font-medium text-slate-600 mb-1">Pilih Peran Anda</label>
                         <select id="role" class="input-field bg-white">
                             <option value="siswa">Siswa</option>
-                            <option value="guru">Guru</option>
+                            <option value="guru">Guru (Wali Kelas)</option>
                             <option value="admin">Admin</option>
                         </select>
                     </div>
@@ -206,32 +222,41 @@
                                   <i class="fa fa-camera mr-2"></i>Absen Pulang
                               </button>
                          </div>
-                         <p class="text-xs text-slate-400 mt-2">Geotagging lokasi Anda akan aktif secara otomatis.</p>
+                         <p id="absenTimeInfo" class="text-xs text-slate-400 mt-2">Masuk: 06:00-15:00 | Pulang: 14:00-15:00</p>
                     </div>
                 </div>
                  <div class="card p-6">
                     <h3 class="text-lg font-bold mb-4 border-b pb-2">Ajukan Izin/Sakit 💌</h3>
                     <form id="izinForm" class="space-y-3">
-                        <select id="izinTipe" class="input-field bg-white">
+                        <!-- <select id="izinTipe" class="input-field bg-white">
                             <option value="Izin">Izin</option>
                             <option value="Sakit">Sakit</option>
-                        </select>
-                        <textarea id="izinAlasan" class="input-field" rows="3" placeholder="Contoh: demam tinggi, ada surat dokter terlampir." required></textarea>
+                        </select> -->
+                        <textarea id="izinAlasan" class="input-field" rows="3" placeholder="Tuliskan alasan Anda di sini..." required></textarea>
                         <div>
                             <label class="text-sm font-medium text-slate-600">Upload Surat (opsional)</label>
                             <input id="izinFile" type="file" class="block w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-maroon-50 file:text-maroon-700 hover:file:bg-maroon-100 mt-1"/>
                         </div>
-                        <button type="submit" class="btn btn-primary w-full">Kirim Laporan</button>
+                        <!-- <button type="submit" class="btn btn-primary w-full">Kirim Laporan</button> -->
+                        
+                        <!-- Tombol yang dipisah -->
+                        <div class="flex gap-4 pt-2">
+                            <button type="button" id="btn-ajukan-izin" data-type="Izin" class="btn bg-blue-600 text-white w-full hover:bg-blue-700">
+                                <i class="fa fa-paper-plane mr-2"></i>Ajukan Izin
+                            </button>
+                            <button type="button" id="btn-ajukan-sakit" data-type="Sakit" class="btn bg-orange-600 text-white w-full hover:bg-orange-700">
+                                <i class="fa fa-notes-medical mr-2"></i>Ajukan Sakit
+                            </button>
+                        </div>
                     </form>
                 </div>
             </div>
             <div class="space-y-6">
                 <div class="card p-6">
-                    <h3 class="text-lg font-bold mb-4">Info & Riwayat 🏆</h3>
-                     <div class="text-center bg-slate-100 text-slate-800 p-4 rounded-lg">
-                        <i class="fas fa-history text-3xl mb-2"></i>
-                        <p class="font-bold">Riwayat Kehadiran</p>
-                        <p id="riwayat-kehadiran" class="text-xs mt-2">Memuat data...</p>
+                    <h3 class="text-lg font-bold mb-4">Info Bulanan Saya 📊</h3>
+                     <div id="info-bulanan-siswa" class="text-left bg-slate-100 text-slate-800 p-4 rounded-lg space-y-2">
+                        <p class="text-center text-sm font-semibold pb-2 border-b border-slate-300">Memuat data rekap...</p>
+                        <!-- Data akan diisi oleh JS -->
                     </div>
                 </div>
             </div>
@@ -239,18 +264,19 @@
     </template>
     <template id="guru-dashboard">
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            <div class="lg:col-span-2">
+            <div class="lg:col-span-2 space-y-6">
                  <div class="card p-6">
                     <div class="flex justify-between items-start">
                         <div>
                             <h3 class="text-lg font-bold">Daftar Hadir Digital 📝 - Kelas <span id="guru-kelas" class="font-semibold"></span></h3>
-                            <p class="text-sm text-slate-500 mb-4">Pelajaran: <span id="guru-mapel" class="font-semibold"></span></p>
+                            <p class="text-sm text-slate-500 mb-4">Wali Kelas: <span id="guru-nama-simple" class="font-semibold"></span></p>
                         </div>
                     </div>
                     <div id="rekap-kelas-container" class="mb-6">
-                        <h4 class="font-bold text-sm mb-2 text-slate-600">Rekap Kelas Hari Ini</h4>
+                        <h4 class="font-bold text-sm mb-2 text-slate-600">Rekap Kelas Hari Ini (Klik untuk detail)</h4>
                         <div id="rekap-kelas-content" class="grid grid-cols-2 md:grid-cols-4 gap-3 text-center">
                             <p class="col-span-full text-slate-500">Memuat rekap...</p>
+                            <!-- Diisi oleh JS: renderDaftarHadir -->
                         </div>
                     </div>
                     <div class="overflow-x-auto">
@@ -263,6 +289,30 @@
                                 </tr>
                             </thead>
                             <tbody id="daftarHadirSiswa"><tr class="bg-white"><td colspan="3" class="text-center p-4">Memuat daftar siswa...</td></tr></tbody>
+                        </table>
+                    </div>
+                </div>
+                <div class="card p-6">
+                    <h3 class="text-lg font-bold mb-4">Rekap Absensi Bulanan (Kelas <span id="guru-kelas-rekap"></span>)</h3>
+                    <div class="flex justify-end gap-2 mb-4">
+                        <button id="btn-download-guru-pdf" class="btn bg-red-600 text-white px-4 py-2 text-xs"><i class="fa fa-file-pdf mr-2"></i>Download PDF</button>
+                        <button id="btn-download-guru-excel" class="btn bg-green-600 text-white px-4 py-2 text-xs"><i class="fa fa-file-excel mr-2"></i>Download Excel</button>
+                    </div>
+                    <div class="max-h-96 overflow-y-auto">
+                        <table class="w-full text-sm text-left">
+                            <thead class="bg-slate-50 text-xs text-slate-700 uppercase sticky top-0">
+                                <tr>
+                                    <th class="px-4 py-3">Nama Siswa</th>
+                                    <th class="px-2 py-3 text-center">Hadir</th>
+                                    <th class="px-2 py-3 text-center">Sakit</th>
+                                    <th class="px-2 py-3 text-center">Izin</th>
+                                    <th class="px-2 py-3 text-center">Alpa</th>
+                                    <th class="px-2 py-3 text-center">Telat</th>
+                                </tr>
+                            </thead>
+                            <tbody id="rekap-bulanan-guru">
+                                <!-- Diisi oleh JS: renderRekapBulananGuru -->
+                            </tbody>
                         </table>
                     </div>
                 </div>
@@ -282,6 +332,12 @@
                          </div>
                     </div>
                 </div>
+                 <div class="card p-6">
+                     <h3 class="text-lg font-bold mb-4">Konfirmasi Izin/Sakit Siswa ✅</h3>
+                     <div id="izin-list-guru" class="space-y-3 max-h-96 overflow-y-auto">
+                        <p class="text-sm text-slate-500 text-center py-4">Memuat data izin...</p>
+                     </div>
+                 </div>
             </div>
         </div>
     </template>
@@ -344,9 +400,8 @@
                     </div>
                     <div id="manajemen-guru-content" class="tab-content">
                         <form id="addGuruForm" class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6 p-4 bg-slate-50 rounded-lg">
-                             <input type="text" id="newGuruName" placeholder="Nama Guru Baru" class="input-field" required>
+                             <input type="text" id="newGuruName" placeholder="Nama Guru Baru (Wali Kelas)" class="input-field" required>
                              <input type="text" id="newGuruKelas" placeholder="Kelas Wali (Contoh: Kelas 12 A)" class="input-field">
-                             <input type="text" id="newGuruMapel" placeholder="Mata Pelajaran" class="input-field sm:col-span-2">
                              <button type="submit" class="btn btn-primary sm:col-span-2"><i class="fa fa-plus mr-2"></i>Tambah Guru</button>
                         </form>
                          <div class="max-h-60 overflow-y-auto">
@@ -357,9 +412,17 @@
             </div>
             <div class="space-y-6">
                  <div class="card p-6">
-                     <h3 class="text-lg font-bold mb-4">Konfirmasi Izin/Sakit Siswa ✅</h3>
-                     <div id="izin-list" class="space-y-3 max-h-96 overflow-y-auto">
+                     <h3 class="text-lg font-bold mb-4">Konfirmasi Izin/Sakit (Global) ✅</h3>
+                     <div id="izin-list-admin" class="space-y-3 max-h-96 overflow-y-auto">
                         <p class="text-sm text-slate-500 text-center py-4">Memuat data izin...</p>
+                     </div>
+                 </div>
+                 <div class="card p-6">
+                     <h3 class="text-lg font-bold mb-4">Rekap Laporan Global 💾</h3>
+                     <p class="text-sm text-slate-500 mb-4">Download rekap absensi bulanan untuk seluruh siswa.</p>
+                     <div class="flex flex-col sm:flex-row gap-4">
+                         <button id="btn-admin-pdf" class="btn bg-red-600 text-white flex-1"><i class="fa fa-file-pdf mr-2"></i>Download PDF</button>
+                         <button id="btn-admin-excel" class="btn bg-green-600 text-white flex-1"><i class="fa fa-file-excel mr-2"></i>Download Excel</button>
                      </div>
                  </div>
             </div>
@@ -369,10 +432,23 @@
     <!-- MODALS -->
     <div id="custom-alert" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
         <div class="bg-white rounded-lg p-6 w-full max-w-sm text-center card">
-            <p id="alert-message" class="mb-4 text-slate-700"></p>
+            <p id="alert-message" class="mb-4 text-slate-700 whitespace-pre-wrap"></p> <!-- whitespace-pre-wrap untuk \n -->
             <div id="alert-buttons">
                 <button id="alert-ok-btn" class="btn btn-primary px-8">OK</button>
             </div>
+        </div>
+    </div>
+    
+    <!-- Modal untuk menampilkan daftar siswa (rekap harian guru) -->
+    <div id="siswa-list-modal" class="hidden fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50 p-4">
+        <div class="bg-white rounded-lg p-6 w-full max-w-md card">
+             <h3 id="siswa-list-title" class="text-lg font-bold mb-4">Daftar Siswa</h3>
+             <ul id="siswa-list-content" class="list-disc list-inside max-h-60 overflow-y-auto space-y-1 text-slate-700">
+                <!-- Diisi oleh JS -->
+             </ul>
+             <div class="mt-6 text-right">
+                 <button id="siswa-list-close-btn" class="btn bg-slate-200 text-slate-700">Tutup</button>
+             </div>
         </div>
     </div>
 
@@ -424,6 +500,13 @@
         const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
         window.supabase = supabaseClient; // for debugging
 
+        // --- KONFIGURASI APLIKASI ---
+        const JAM_BATAS_TELAT = 7; // Jam 7:00 pagi
+        const JAM_BUKA_MASUK = 6;  // Jam 6 pagi
+        const JAM_TUTUP_MASUK = 15; // Jam 3 sore
+        const JAM_BUKA_PULANG = 14; // Jam 2 siang
+        const JAM_TUTUP_PULANG = 15; // Jam 3 sore
+        
         // --- DOM ELEMENTS ---
         const loginPage = document.getElementById('loginPage'), dashboard = document.getElementById('dashboard');
         const roleSelect = document.getElementById('role');
@@ -434,6 +517,7 @@
         const customAlert = document.getElementById('custom-alert'), alertMessage = document.getElementById('alert-message'), alertOkBtn = document.getElementById('alert-ok-btn'), alertButtons = document.getElementById('alert-buttons');
         const editModal = document.getElementById('edit-modal'), editModalTitle = document.getElementById('edit-modal-title'), editForm = document.getElementById('edit-form'), editCancelBtn = document.getElementById('edit-cancel-btn'), editSaveBtn = document.getElementById('edit-save-btn');
         const cameraModal = document.getElementById('camera-modal'), closeCameraBtn = document.getElementById('close-camera-btn'), cameraFeed = document.getElementById('camera-feed'), cameraCanvas = document.getElementById('camera-canvas'), captureBtn = document.getElementById('capture-btn'), photoPreview = document.getElementById('photo-preview'), recaptureBtn = document.getElementById('recapture-btn'), confirmPhotoBtn = document.getElementById('confirm-photo-btn');
+        const siswaListModal = document.getElementById('siswa-list-modal'), siswaListTitle = document.getElementById('siswa-list-title'), siswaListContent = document.getElementById('siswa-list-content'), siswaListCloseBtn = document.getElementById('siswa-list-close-btn');
         
         let stream;
         let currentUser = {};
@@ -448,18 +532,8 @@
             if (guruCount === 0) {
                 console.log("No teachers found, seeding teacher data...");
                 const teachers = [
-                    { name: 'Drs. Budi Santoso, M.Pd.', kelas: 'Kelas 12 A', mapel: 'Matematika' },
-                    { name: 'Dra. Siti Aminah, S.Pd.', kelas: 'Kelas 12 B', mapel: 'Bahasa Indonesia' },
-                    { name: 'Ahmad Fauzi, S.Kom.', kelas: 'Kelas 12 C', mapel: 'Fisika' },
-                    { name: 'Dewi Lestari, S.S.', kelas: 'Kelas 12 D', mapel: 'Bahasa Inggris' },
-                    { name: 'Eko Prasetyo, S.Pd.', kelas: 'Kelas 12 E', mapel: 'Kimia' },
-                    { name: 'Fitriani, S.Ag.', kelas: 'Kelas 12 F', mapel: 'Pendidikan Agama' },
-                    { name: 'Gunawan, S.Or.', kelas: 'Kelas 12 G', mapel: 'Olahraga' },
-                    { name: 'Herlina, S.Pd., M.Si.', kelas: 'Kelas 12 H', mapel: 'Biologi' },
-                    { name: 'Indra Wijaya, S.E.', kelas: 'Kelas 12 I', mapel: 'Ekonomi' },
-                    { name: 'Joko Susilo, S.Pd.', kelas: 'Kelas 12 J', mapel: 'Sejarah' },
-                    { name: 'Kartika Sari, S.Sn.', kelas: 'Kelas 12 K', mapel: 'Seni Budaya' },
-                    { name: 'Linda Purnamasari, S.T.', kelas: 'Kelas 12 L', mapel: 'TIK' },
+                    { name: 'Drs. Budi Santoso, M.Pd.', kelas: 'Kelas 12 A' },
+                    { name: 'Dra. Siti Aminah, S.Pd.', kelas: 'Kelas 12 B' },
                 ];
                 const { error } = await supabaseClient.from('guru').insert(teachers);
                 if (error) console.error("Error seeding teachers:", error);
@@ -470,24 +544,18 @@
             const { count: siswaCount } = await supabaseClient.from('siswa').select('*', { count: 'exact', head: true });
             if (siswaCount === 0) {
                 console.log("No students found, seeding student data...");
-                const firstNames = ["Adinda", "Bayu", "Citra", "Dimas", "Eka", "Fajar", "Gita", "Hafiz", "Indah", "Joko", "Kevin", "Lestari", "Muhammad", "Novita", "Oscar", "Putri", "Rama", "Shinta", "Toni", "Umi"];
-                const lastNames = ["Putri", "Aji", "Kirana", "Anggara", "Yulianti", "Nugroho", "Permata", "Maulana", "Sari", "Widodo", "Sanjaya", "Wulandari", "Rizky", "Ramadhani", "Wijaya", "Ayu", "Dhani", "Bella", "Firmansyah", "Kalsum"];
-                const students = [];
-                const kelasHuruf = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L'];
+                const students = [
+                    // Kelas 12 A
+                    { name: "Adinda Putri", kelas: "Kelas 12 A" },
+                    { name: "Bayu Aji", kelas: "Kelas 12 A" },
+                    // Kelas 12 B
+                    { name: "Citra Kirana", kelas: "Kelas 12 B" },
+                    { name: "Dimas Anggara", kelas: "Kelas 12 B" },
+                ];
                 
-                kelasHuruf.forEach(h => {
-                    const namaKelas = `Kelas 12 ${h}`;
-                    for(let i=0; i<10; i++){
-                        const randomFirstName = firstNames[Math.floor(Math.random() * firstNames.length)];
-                        const randomLastName = lastNames[Math.floor(Math.random() * lastNames.length)];
-                        // ensure unique name
-                        const studentName = `${randomFirstName} ${randomLastName} ${i+1}`;
-                        students.push({ name: studentName, kelas: namaKelas });
-                    }
-                });
                 const { error } = await supabaseClient.from('siswa').insert(students);
                 if (error) console.error("Error seeding students:", error);
-                else console.log("Student data for 12 classes seeded successfully.");
+                else console.log("Student data for 2 classes seeded successfully.");
             }
         };
 
@@ -498,6 +566,33 @@
             document.getElementById('alert-ok-btn').addEventListener('click', () => customAlert.classList.add('hidden'));
             customAlert.classList.remove('hidden');
         };
+        
+        // Fungsi helper BARU untuk mendapatkan rentang hari ini (lokal)
+        const getTodayDateRange = () => {
+            const now = new Date();
+            // Set ke jam 00:00:00 waktu lokal
+            const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+            // Set ke awal besok (jam 00:00:00 besok)
+            const tomorrow = new Date(today);
+            tomorrow.setDate(tomorrow.getDate() + 1);
+            
+            // Kembalikan sebagai string ISO yang bisa dibaca Supabase
+            return {
+                start: today.toISOString(), // Awal hari ini (lokal)
+                end: tomorrow.toISOString()  // Awal besok (lokal)
+            };
+        };
+
+        const showSiswaListModal = (title, siswaList) => {
+            siswaListTitle.textContent = title;
+            if (siswaList.length > 0) {
+                siswaListContent.innerHTML = siswaList.map(nama => `<li>${nama}</li>`).join('');
+            } else {
+                siswaListContent.innerHTML = `<li class="text-slate-500">Tidak ada siswa dalam kategori ini.</li>`;
+            }
+            siswaListModal.classList.remove('hidden');
+        };
+        siswaListCloseBtn.addEventListener('click', () => siswaListModal.classList.add('hidden'));
 
         const showConfirmation = (message, callback) => {
             alertMessage.textContent = message;
@@ -527,6 +622,13 @@
         };
 
         const getTodayDate = () => new Date().toISOString().split('T')[0];
+        
+        const getMonthDateRange = () => {
+            const date = new Date();
+            const firstDay = new Date(date.getFullYear(), date.getMonth(), 1).toISOString().split('T')[0];
+            const lastDay = new Date(date.getFullYear(), date.getMonth() + 1, 0).toISOString().split('T')[0];
+            return { firstDay, lastDay };
+        };
 
         // --- DATA FETCHING & POPULATION ---
         const populateKelasSelect = async () => {
@@ -619,7 +721,8 @@
                     const simpleName = user.split(',')[0];
                     welcomeMessage.textContent = `Selamat bertugas, ${simpleName}! 📚`;
                     template.querySelector('#guru-kelas').textContent = data.kelas;
-                    template.querySelector('#guru-mapel').textContent = data.mapel;
+                    template.querySelector('#guru-kelas-rekap').textContent = data.kelas;
+                    template.querySelector('#guru-nama-simple').textContent = simpleName;
                     dashboardContent.appendChild(template);
                     setupGuruDashboard();
                 });
@@ -641,12 +744,12 @@
             const btnMasuk = dashboardContent.querySelector('#btn-absen-masuk');
             const btnPulang = dashboardContent.querySelector('#btn-absen-pulang');
             const fotoMasukImg = dashboardContent.querySelector('#fotoMasuk');
-            const fotoPulangImg = dashboardContent.querySelector('#fotoPulang');
+            const fotoPulangImg = document.getElementById('fotoPulang');
             const fotoContainer = dashboardContent.querySelector('#foto-bukti-container');
 
             // Check today's attendance status
             const { data, error } = await supabaseClient.from('absensi')
-                .select('type, photo_url')
+                .select('type, photo_url, status')
                 .eq('user_name', currentUser.name)
                 .eq('attendance_date', getTodayDate());
             
@@ -659,8 +762,14 @@
                 if (absenMasuk) {
                     btnMasuk.disabled = true;
                     btnPulang.disabled = false;
-                    absensiStatus.textContent = 'Status: Sudah Absen Masuk';
-                    absensiStatus.className = 'font-bold text-xl p-3 rounded-lg bg-green-100 text-green-800';
+                    
+                    if (absenMasuk.status === 'telat') {
+                        absensiStatus.textContent = 'Status: Sudah Absen Masuk (TERLAMBAT)';
+                        absensiStatus.className = 'font-bold text-xl p-3 rounded-lg bg-orange-100 text-orange-800';
+                    } else {
+                        absensiStatus.textContent = 'Status: Sudah Absen Masuk';
+                        absensiStatus.className = 'font-bold text-xl p-3 rounded-lg bg-green-100 text-green-800';
+                    }
                     fotoMasukImg.src = absenMasuk.photo_url;
                     fotoContainer.classList.remove('hidden');
                 } else {
@@ -675,8 +784,11 @@
                     fotoPulangImg.src = absenPulang.photo_url;
                 }
             }
+            
+            renderSiswaInfoBulanan(); // Panggil fungsi rekap bulanan siswa
 
-
+            // Hapus listener form submit yang lama
+            /*
             dashboardContent.querySelector('#izinForm').addEventListener('submit', async (e) => {
                 e.preventDefault();
                 const btn = e.target.querySelector('button[type="submit"]');
@@ -715,6 +827,124 @@
                     e.target.reset();
                 }
             });
+            */
+            
+            // Tambahkan listener baru untuk tombol yang dipisah
+            document.getElementById('btn-ajukan-izin').addEventListener('click', handleAjukanIzin);
+            document.getElementById('btn-ajukan-sakit').addEventListener('click', handleAjukanIzin);
+        };
+        
+        // Fungsi baru untuk menangani kedua tombol
+        const handleAjukanIzin = async (e) => {
+            const btn = e.currentTarget;
+            const izinType = btn.dataset.type; // "Izin" atau "Sakit"
+            const originalText = btn.innerHTML;
+            showLoader(btn);
+
+            // Ambil elemen form dari dashboard
+            const alasanInput = dashboardContent.querySelector('#izinAlasan');
+            const fileInput = dashboardContent.querySelector('#izinFile');
+
+            const alasan = alasanInput.value;
+            if (!alasan || alasan.trim() === '') {
+                showAlert('Alasan harus diisi.');
+                hideLoader(btn, originalText);
+                return;
+            }
+
+            const izinData = {
+                siswa_name: currentUser.name,
+                siswa_kelas: currentUser.kelas,
+                type: izinType, // Diambil dari tombol yang diklik
+                reason: alasan,
+                created_at: new Date().toISOString(), // <-- TAMBAHKAN BARIS INI
+            };
+            
+            if (fileInput.files.length > 0) {
+                const file = fileInput.files[0];
+                const filePath = `izin/${currentUser.kelas.replace(/\s+/g, '_')}/${currentUser.name.replace(/\s+/g, '_')}-${izinType}-${Date.now()}`;
+                const { error: uploadError } = await supabaseClient.storage.from('uploads').upload(filePath, file);
+
+                if (uploadError) {
+                    showAlert('Gagal mengupload file: ' + uploadError.message);
+                    hideLoader(btn, originalText);
+                    return;
+                }
+                
+                const { data: { publicUrl } } = supabaseClient.storage.from('uploads').getPublicUrl(filePath);
+                izinData.file_url = publicUrl;
+            }
+
+            const { error: insertError } = await supabaseClient.from('izin').insert(izinData);
+            hideLoader(btn, originalText);
+            
+            if (insertError) {
+                showAlert('Gagal mengirim laporan: ' + insertError.message);
+            } else {
+                showAlert(`Laporan ${izinType} berhasil dikirim!`);
+                // Reset form
+                alasanInput.value = '';
+                fileInput.value = null;
+            }
+        };
+
+        const renderSiswaInfoBulanan = async () => {
+            const container = document.getElementById('info-bulanan-siswa');
+            if (!container) return;
+            container.innerHTML = '<p class="text-center text-sm font-semibold pb-2 border-b border-slate-300">Memuat data rekap...</p>';
+            
+            const { firstDay, lastDay } = getMonthDateRange();
+            const rekap = { izin: 0, sakit: 0, alpa: 0, telat: 0 };
+            
+            // 1. Hitung Izin & Sakit (dari tabel izin)
+            const { data: izinData, error: izinError } = await supabaseClient.from('izin')
+                .select('type, status')
+                .eq('siswa_name', currentUser.name)
+                .eq('status', 'disetujui') // Hanya hitung yg disetujui
+                .gte('created_at', firstDay)
+                .lte('created_at', lastDay);
+            
+            if (izinData) {
+                izinData.forEach(i => {
+                    if (i.type === 'Izin') rekap.izin++;
+                    else if (i.type === 'Sakit') rekap.sakit++;
+                });
+            }
+
+            // 2. Hitung Telat (dari tabel absensi)
+            const { data: absensiData, error: absensiError } = await supabaseClient.from('absensi')
+                .select('status')
+                .eq('user_name', currentUser.name)
+                .eq('type', 'masuk')
+                .eq('status', 'telat') // Hanya ambil yg telat
+                .gte('attendance_date', firstDay)
+                .lte('attendance_date', lastDay);
+            
+            if (absensiData) {
+                rekap.telat = absensiData.length;
+            }
+            
+            // 3. TODO: Hitung Alpa (ini lebih kompleks, butuh perbandingan hari kerja vs data hadir/izin)
+            // Untuk saat ini, Alpa kita biarkan 0
+            
+            container.innerHTML = `
+                <div class="flex justify-between items-center">
+                    <span class="text-sm text-slate-600">Izin (disetujui):</span>
+                    <span class="font-bold text-lg">${rekap.izin}</span>
+                </div>
+                <div class="flex justify-between items-center">
+                    <span class="text-sm text-slate-600">Sakit (disetujui):</span>
+                    <span class="font-bold text-lg">${rekap.sakit}</span>
+                </div>
+                <div class="flex justify-between items-center">
+                    <span class="text-sm text-slate-600">Alpa:</span>
+                    <span class="font-bold text-lg">${rekap.alpa}</span>
+                </div>
+                <div class="flex justify-between items-center">
+                    <span class="text-sm text-slate-600">Telat:</span>
+                    <span class="font-bold text-lg text-orange-600">${rekap.telat}</span>
+                </div>
+            `;
         };
 
         const setupGuruDashboard = async () => {
@@ -738,19 +968,121 @@
                 absensiStatusGuru.textContent = 'Status: Belum Absen';
                 absensiStatusGuru.className = 'font-bold text-xl p-3 rounded-lg bg-slate-100';
             }
+            
+            // Render data kelas
             renderDaftarHadir(currentUser.guruData.kelas, 'daftarHadirSiswa', 'rekap-kelas-content');
+            renderRekapBulananGuru(currentUser.guruData.kelas);
+            renderIzinListForGuru(currentUser.guruData.kelas);
+            
+            // Tambah listener untuk tombol download
+            document.getElementById('btn-download-guru-pdf').addEventListener('click', () => downloadRekapPDF(currentUser.guruData.kelas));
+            document.getElementById('btn-download-guru-excel').addEventListener('click', () => downloadRekapExcel(currentUser.guruData.kelas));
+            
+            // --- REAL-TIME SUBSCRIPTIONS FOR GURU ---
+            const guruKelas = currentUser.guruData.kelas;
+
+            // Listen to Izin changes for this class
+            supabaseClient.channel(`public:izin:guru:${guruKelas.replace(/\s+/g, '_')}`)
+                .on('postgres_changes', { 
+                    event: '*', 
+                    schema: 'public', 
+                    table: 'izin', 
+                    filter: `siswa_kelas=eq.${guruKelas}` 
+                }, (payload) => {
+                    console.log('Perubahan Izin terdeteksi (Guru), memuat ulang daftar...');
+                    renderIzinListForGuru(guruKelas);
+                    renderDaftarHadir(guruKelas, 'daftarHadirSiswa', 'rekap-kelas-content');
+                })
+                .subscribe();
+
+            // Listen to Absensi changes (global, but only re-renders this class)
+            supabaseClient.channel(`public:absensi:guru:${guruKelas.replace(/\s+/g, '_')}`)
+                .on('postgres_changes', { 
+                    event: '*', 
+                    schema: 'public', 
+                    table: 'absensi' 
+                }, (payload) => {
+                    console.log('Perubahan Absensi terdeteksi (Guru), memuat ulang daftar...');
+                    // Sederhana: Muat ulang daftar hadir.
+                    renderDaftarHadir(guruKelas, 'daftarHadirSiswa', 'rekap-kelas-content');
+                })
+                .subscribe();
+            // --- END REAL-TIME ---
+        
+        };
+        
+        const renderRekapBulananGuru = async (kelas) => {
+            const tableBody = document.getElementById('rekap-bulanan-guru');
+            if (!tableBody) return;
+            tableBody.innerHTML = `<tr><td colspan="6" class="p-4 text-center text-slate-500">Memuat rekap bulanan...</td></tr>`;
+            
+            const rekapData = await fetchRekapBulananData(kelas);
+            
+            if (rekapData.length === 0) {
+                tableBody.innerHTML = `<tr><td colspan="6" class="p-4 text-center text-slate-500">Belum ada data rekap bulan ini.</td></tr>`;
+                return;
+            }
+            
+            tableBody.innerHTML = rekapData.map(siswa => `
+                <tr class="border-b">
+                    <td class="px-4 py-3 font-medium">${siswa.name}</td>
+                    <td class="px-2 py-3 text-center">${siswa.hadir}</td>
+                    <td class="px-2 py-3 text-center">${siswa.sakit}</td>
+                    <td class="px-2 py-3 text-center">${siswa.izin}</td>
+                    <td class="px-2 py-3 text-center">${siswa.alpa}</td>
+                    <td class="px-2 py-3 text-center ${siswa.telat > 0 ? 'text-orange-600 font-bold' : ''}">${siswa.telat}</td>
+                </tr>
+            `).join('');
+        };
+        
+        const renderIzinListForGuru = async (kelas) => {
+            const container = document.getElementById('izin-list-guru');
+            if (!container) return;
+            
+            const { data, error } = await supabaseClient.from('izin').select('*').eq('status', 'pending').eq('siswa_kelas', kelas);
+            
+            if (error) return container.innerHTML = `<p class="text-sm text-red-500">Gagal memuat data.</p>`;
+            
+            container.innerHTML = '';
+            if (data.length > 0) {
+                data.forEach(izin => {
+                    const card = document.createElement('div');
+                    card.className = 'p-3 border rounded-lg bg-slate-50';
+                    card.dataset.id = izin.id;
+                    card.innerHTML = `
+                        <p class="font-bold">${izin.siswa_name} - <span class="font-normal text-sm ${izin.type === 'Sakit' ? 'text-orange-600' : 'text-blue-600'}">${izin.type}</span></p>
+                        <p class="text-xs text-slate-500 mt-1">${izin.reason}</p>
+                        ${izin.file_url ? `<a href="${izin.file_url}" target="_blank" class="text-xs text-blue-500 hover:underline mt-1 block"><i class="fa fa-paperclip mr-1"></i>Lihat Surat</a>` : ''}
+                        <div class="text-right mt-2 space-x-2">
+                            <button class="btn-konfirmasi setujui text-xs bg-green-500 text-white px-3 py-1 rounded hover:bg-green-600" data-action="disetujui">Setujui</button>
+                            <button class="btn-konfirmasi tolak text-xs bg-red-500 text-white px-3 py-1 rounded hover:bg-red-600" data-action="ditolak">Tolak</button>
+                        </div>`;
+                    container.appendChild(card);
+                });
+                container.querySelectorAll('.btn-konfirmasi').forEach(btn => btn.addEventListener('click', handleKonfirmasiIzin));
+            } else {
+                container.innerHTML = `<p class="text-sm text-slate-500 text-center py-4">Tidak ada pengajuan izin saat ini. 🎉</p>`;
+            }
         };
 
         const setupAdminDashboard = async () => {
             const fetchStats = async () => {
                 const today = getTodayDate();
+                const todayRange = getTodayDateRange(); // <-- GUNAKAN FUNGSI BARU
+                
                 // Get total students and gurus
                 const { count: totalSiswa } = await supabaseClient.from('siswa').select('*', { count: 'exact', head: true });
                 // Get today's attendance
                 const { data: absensiSiswa, error: errAbsensi } = await supabaseClient.from('absensi').select('user_name').eq('attendance_date', today).eq('user_role', 'siswa').eq('type', 'masuk');
                 const { count: guruHadir } = await supabaseClient.from('absensi').select('*', { count: 'exact', head: true }).eq('attendance_date', today).eq('user_role', 'guru');
+                
                 // Get today's approved izin/sakit
-                const { count: siswaIzin } = await supabaseClient.from('izin').select('*', { count: 'exact', head: true }).eq('created_at', today).eq('status', 'disetujui');
+                // PERBAIKAN: Gunakan rentang tanggal, bukan .eq('created_at', today)
+                const { count: siswaIzin } = await supabaseClient.from('izin')
+                    .select('*', { count: 'exact', head: true })
+                    .gte('created_at', todayRange.start) // <-- PERBAIKAN
+                    .lt('created_at', todayRange.end)     // <-- PERBAIKAN
+                    .eq('status', 'disetujui');
                 
                 const siswaHadir = absensiSiswa ? absensiSiswa.length : 0;
                 const siswaAlpa = totalSiswa - siswaHadir - (siswaIzin || 0);
@@ -779,38 +1111,73 @@
                     document.getElementById('adminDaftarHadirSiswa').innerHTML = `<tr class="bg-white"><td colspan="3" class="text-center p-4 text-slate-500">Silakan pilih kelas terlebih dahulu.</td></tr>`;
                 }
             });
-
-            // Real-time subscriptions
-            supabaseClient.channel('public:izin')
-                .on('postgres_changes', { event: '*', schema: 'public', table: 'izin' }, () => { renderIzinListForAdmin(); fetchStats(); })
-                .subscribe();
             
-            supabaseClient.channel('public:absensi')
-                .on('postgres_changes', { event: '*', schema: 'public', table: 'absensi' }, payload => {
-                    if (payload.new.user_role === 'guru') {
-                        renderGuruAttendanceForAdmin();
-                        fetchStats();
+            // Listener tombol download Admin
+            document.getElementById('btn-admin-pdf').addEventListener('click', () => downloadRekapPDF(null)); // null = semua kelas
+            document.getElementById('btn-admin-excel').addEventListener('click', () => downloadRekapExcel(null)); // null = semua kelas
+
+
+            // --- REAL-TIME SUBSCRIPTIONS FOR ADMIN ---
+            
+            // Real-time subscriptions
+            supabaseClient.channel('public:izin:admin') // Channel admin
+                .on('postgres_changes', { event: '*', schema: 'public', table: 'izin' }, () => {
+                    console.log('Perubahan Izin terdeteksi (Admin), memuat ulang daftar...');
+                    renderIzinListForAdmin(); 
+                    fetchStats();
+                    // Refresh daftar hadir admin jika ada kelas yg dipilih
+                    const adminKelasSelect = document.getElementById('adminKelasSelect');
+                    if (adminKelasSelect && adminKelasSelect.value) {
+                        renderDaftarHadir(adminKelasSelect.value, 'adminDaftarHadirSiswa');
                     }
                 })
                 .subscribe();
+            
+            supabaseClient.channel('public:absensi:admin') // Channel admin
+                .on('postgres_changes', { event: '*', schema: 'public', table: 'absensi' }, payload => {
+                    console.log('Perubahan Absensi terdeteksi (Admin), memuat ulang daftar...');
+                    fetchStats();
+                    if (payload.new.user_role === 'guru') {
+                        renderGuruAttendanceForAdmin();
+                    }
+                    if (payload.new.user_role === 'siswa') {
+                        // Refresh daftar hadir yg mungkin sedang dilihat admin
+                        const adminKelasSelect = document.getElementById('adminKelasSelect');
+                         if (adminKelasSelect && adminKelasSelect.value) {
+                            renderDaftarHadir(adminKelasSelect.value, 'adminDaftarHadirSiswa');
+                        }
+                    }
+                })
+                .subscribe();
+            // --- END REAL-TIME ---
+            
         };
 
         const renderDaftarHadir = async (kelas, tableBodyId, rekapContainerId = null) => {
+            if (!kelas) return; // Jangan render jika kelas tidak dipilih
+            
             const tableBody = document.getElementById(tableBodyId);
             tableBody.innerHTML = `<tr><td colspan="3" class="text-center p-4">Memuat data...</td></tr>`;
             
             // Get all students in the class
             const { data: siswaDiKelas, error: siswaError } = await supabaseClient.from('siswa').select('name').eq('kelas', kelas);
             if(siswaError) return tableBody.innerHTML = `<tr><td colspan="3" class="text-center p-4 text-red-500">Gagal memuat siswa.</td></tr>`;
+            if (!siswaDiKelas || siswaDiKelas.length === 0) return tableBody.innerHTML = `<tr><td colspan="3" class="text-center p-4">Tidak ada siswa di kelas ini.</td></tr>`;
 
             // Get all attendance and izin data for today
             const today = getTodayDate();
-            const { data: absensiHariIni, error: absensiError } = await supabaseClient.from('absensi').select('user_name, type, photo_url').eq('attendance_date', today);
-            const { data: izinHariIni, error: izinError } = await supabaseClient.from('izin').select('siswa_name, type, status').eq('created_at', today);
+            const todayRange = getTodayDateRange(); // <-- GUNAKAN FUNGSI BARU
+            
+            const { data: absensiHariIni, error: absensiError } = await supabaseClient.from('absensi').select('user_name, type, photo_url, status').eq('attendance_date', today);
+            
+            // PERBAIKAN: Gunakan rentang tanggal, bukan .eq('created_at', today)
+            const { data: izinHariIni, error: izinError } = await supabaseClient.from('izin')
+                .select('siswa_name, type, status')
+                .gte('created_at', todayRange.start) // <-- PERBAIKAN
+                .lt('created_at', todayRange.end);  // <-- PERBAIKAN
 
-            if (!siswaDiKelas) return tableBody.innerHTML = `<tr><td colspan="3" class="text-center p-4">Tidak ada siswa di kelas ini.</td></tr>`;
-
-            let rekap = { Hadir: 0, 'Izin/Sakit': 0, Alpa: siswaDiKelas.length };
+            let rekap = { Hadir: 0, Telat: 0, 'Izin/Sakit': 0, Alpa: 0 };
+            let lists = { Hadir: [], Telat: [], 'Izin/Sakit': [], Alpa: [] };
             
             tableBody.innerHTML = ''; // Clear table
             for (const siswa of siswaDiKelas) {
@@ -820,15 +1187,23 @@
                 
                 let statusHtml = '';
                 if(absenMasuk) {
-                    statusHtml = `<span class="px-2 py-1 text-xs font-medium rounded-full bg-green-100 text-green-800">Hadir</span>`;
-                    rekap.Hadir++;
-                    rekap.Alpa--;
+                    if (absenMasuk.status === 'telat') {
+                        statusHtml = `<span class="px-2 py-1 text-xs font-medium rounded-full bg-orange-100 text-orange-800">Hadir (Telat)</span>`;
+                        rekap.Telat++;
+                        lists.Telat.push(siswa.name);
+                    } else {
+                        statusHtml = `<span class="px-2 py-1 text-xs font-medium rounded-full bg-green-100 text-green-800">Hadir</span>`;
+                        rekap.Hadir++;
+                        lists.Hadir.push(siswa.name);
+                    }
                 } else if (izinDisetujui) {
                     statusHtml = `<span class="px-2 py-1 text-xs font-medium rounded-full bg-yellow-100 text-yellow-800">${izinDisetujui.type}</span>`;
                     rekap['Izin/Sakit']++;
-                    rekap.Alpa--;
+                    lists['Izin/Sakit'].push(siswa.name);
                 } else {
                     statusHtml = `<span class="px-2 py-1 text-xs font-medium rounded-full bg-red-100 text-red-800">Alpa</span>`;
+                    rekap.Alpa++;
+                    lists.Alpa.push(siswa.name);
                 }
 
                 const photoMasukUrl = absenMasuk?.photo_url || 'https://placehold.co/40x40/e2e8f0/475569?text=M';
@@ -857,15 +1232,36 @@
             if (rekapContainerId) {
                 const rekapContainer = document.getElementById(rekapContainerId);
                 rekapContainer.innerHTML = `
-                    <div class="bg-green-100 p-3 rounded-lg"><p class="font-bold text-green-800 text-xl">${rekap.Hadir}</p><p class="text-xs text-green-600 font-medium">Hadir</p></div>
-                    <div class="bg-yellow-100 p-3 rounded-lg"><p class="font-bold text-yellow-800 text-xl">${rekap['Izin/Sakit']}</p><p class="text-xs text-yellow-600 font-medium">Izin/Sakit</p></div>
-                    <div class="bg-red-100 p-3 rounded-lg"><p class="font-bold text-red-800 text-xl">${rekap.Alpa}</p><p class="text-xs text-red-600 font-medium">Alpa</p></div>
+                    <div class="rekap-harian-btn bg-green-100 p-3 rounded-lg" data-title="Siswa Hadir" data-list="Hadir">
+                        <p class="font-bold text-green-800 text-xl">${rekap.Hadir}</p>
+                        <p class="text-xs text-green-600 font-medium">Hadir</p>
+                    </div>
+                    <div class="rekap-harian-btn bg-orange-100 p-3 rounded-lg" data-title="Siswa Telat" data-list="Telat">
+                        <p class="font-bold text-orange-800 text-xl">${rekap.Telat}</p>
+                        <p class="text-xs text-orange-600 font-medium">Telat</p>
+                    </div>
+                    <div class="rekap-harian-btn bg-yellow-100 p-3 rounded-lg" data-title="Siswa Izin/Sakit" data-list="Izin/Sakit">
+                        <p class="font-bold text-yellow-800 text-xl">${rekap['Izin/Sakit']}</p>
+                        <p class="text-xs text-yellow-600 font-medium">Izin/Sakit</p>
+                    </div>
+                    <div class="rekap-harian-btn bg-red-100 p-3 rounded-lg" data-title="Siswa Alpa" data-list="Alpa">
+                        <p class="font-bold text-red-800 text-xl">${rekap.Alpa}</p>
+                        <p class="text-xs text-red-600 font-medium">Alpa</p>
+                    </div>
                 `;
+                // Tambahkan event listener ke tombol rekap
+                rekapContainer.querySelectorAll('.rekap-harian-btn').forEach(btn => {
+                    btn.addEventListener('click', () => {
+                        const title = btn.dataset.title;
+                        const listName = btn.dataset.list;
+                        showSiswaListModal(title, lists[listName]);
+                    });
+                });
             }
         };
         
         const renderIzinListForAdmin = async () => {
-            const container = document.getElementById('izin-list');
+            const container = document.getElementById('izin-list-admin');
             const { data, error } = await supabaseClient.from('izin').select('*').eq('status', 'pending');
             
             if (error) return container.innerHTML = `<p class="text-sm text-red-500">Gagal memuat data.</p>`;
@@ -967,7 +1363,7 @@
                 else {
                     showAlert('Siswa berhasil ditambahkan!');
                     addSiswaForm.reset();
-                    // Real-time will update the table
+                    renderSiswaManagementTable(); // Langsung update tabel
                 }
             });
 
@@ -980,20 +1376,20 @@
                 showLoader(btn);
                 const name = document.getElementById('newGuruName').value;
                 const kelas = document.getElementById('newGuruKelas').value;
-                const mapel = document.getElementById('newGuruMapel').value;
-                const { error } = await supabaseClient.from('guru').insert({ name, kelas, mapel });
+                const { error } = await supabaseClient.from('guru').insert({ name, kelas });
                 hideLoader(btn, originalText);
                 if (error) showAlert('Gagal menambah guru: ' + error.message);
                 else {
                     showAlert('Guru berhasil ditambahkan!');
                     addGuruForm.reset();
+                    renderGuruManagementTable(); // Langsung update tabel
                 }
             });
             
             renderSiswaManagementTable();
             renderGuruManagementTable();
             
-            // Listen to changes
+            // Listen to changes (untuk sinkronisasi, tapi kita sudah panggil manual)
             supabaseClient.channel('public:siswa').on('postgres_changes', { event: '*', schema: 'public', table: 'siswa' }, renderSiswaManagementTable).subscribe();
             supabaseClient.channel('public:guru').on('postgres_changes', { event: '*', schema: 'public', table: 'guru' }, renderGuruManagementTable).subscribe();
         };
@@ -1024,7 +1420,7 @@
             tableBody.innerHTML = data.map(guru => `
                 <tr class="border-b">
                     <td class="p-2 font-medium">${guru.name}</td>
-                    <td class="p-2 text-slate-600">${guru.kelas} / ${guru.mapel}</td>
+                    <td class="p-2 text-slate-600">${guru.kelas}</td>
                     <td class="p-2 text-right">
                         <button class="edit-btn text-blue-600 hover:text-blue-800 mr-2" data-type="guru" data-id="${guru.id}"><i class="fa fa-edit"></i></button>
                         <button class="delete-btn text-red-600 hover:text-red-800" data-type="guru" data-id="${guru.id}"><i class="fa fa-trash"></i></button>
@@ -1056,7 +1452,6 @@
                 editForm.innerHTML = `
                     <div><label class="block text-sm">Nama Guru</label><input type="text" id="edit-name" class="input-field" value="${data.name}"></div>
                     <div><label class="block text-sm">Kelas Wali</label><input type="text" id="edit-kelas" class="input-field" value="${data.kelas}"></div>
-                    <div><label class="block text-sm">Mata Pelajaran</label><input type="text" id="edit-mapel" class="input-field" value="${data.mapel}"></div>
                 `;
             }
 
@@ -1089,8 +1484,7 @@
             } else if (type === 'guru') {
                  updatedData = {
                     name: document.getElementById('edit-name').value,
-                    kelas: document.getElementById('edit-kelas').value,
-                    mapel: document.getElementById('edit-mapel').value
+                    kelas: document.getElementById('edit-kelas').value
                 };
             }
 
@@ -1105,9 +1499,36 @@
         editCancelBtn.addEventListener('click', () => editModal.classList.add('hidden'));
 
 
-        // --- CAMERA LOGIC ---
+        // --- CAMERA LOGIC (DENGAN BATAS WAKTU & DETEKSI TELAT) ---
         let currentAbsenType = '';
         const openCameraModal = async (type) => {
+            // Validasi Waktu Absen
+            const now = new Date();
+            const jam = now.getHours();
+            
+            if (type === 'masuk') {
+                if (jam < JAM_BUKA_MASUK || jam >= JAM_TUTUP_MASUK) {
+                    showAlert(`Absen Masuk hanya bisa dilakukan antara pukul ${JAM_BUKA_MASUK}:00 - ${JAM_TUTUP_MASUK}:00.`);
+                    return;
+                }
+            } else if (type === 'pulang') {
+                if (jam < JAM_BUKA_PULANG || jam >= JAM_TUTUP_PULANG) {
+                    showAlert(`Absen Pulang hanya bisa dilakukan antara pukul ${JAM_BUKA_PULANG}:00 - ${JAM_TUTUP_PULANG}:00.`);
+                    return;
+                }
+                // Cek apakah sudah absen masuk
+                const { data, error } = await supabaseClient.from('absensi')
+                    .select('type')
+                    .eq('user_name', currentUser.name)
+                    .eq('attendance_date', getTodayDate())
+                    .eq('type', 'masuk');
+                if (!data || data.length === 0) {
+                    showAlert('Anda harus absen masuk terlebih dahulu sebelum absen pulang.');
+                    return;
+                }
+            }
+
+            // Jika lolos validasi, buka kamera
             currentAbsenType = type;
             cameraModal.classList.remove('hidden');
             recaptureBtn.click();
@@ -1169,12 +1590,23 @@
 
             const { data: { publicUrl } } = supabaseClient.storage.from('uploads').getPublicUrl(filePath);
             
+            // --- LOGIKA DETEKSI TELAT ---
+            let status = 'hadir';
+            if (currentAbsenType === 'masuk') {
+                const now = new Date();
+                if (now.getHours() >= JAM_BATAS_TELAT) {
+                    status = 'telat';
+                }
+            }
+            // --- END LOGIKA DETEKSI TELAT ---
+            
             const attendanceData = {
                 user_name: currentUser.name,
                 user_role: currentUser.role,
                 type: currentAbsenType,
                 photo_url: publicUrl,
-                attendance_date: getTodayDate()
+                attendance_date: getTodayDate(),
+                status: status // Simpan status 'hadir' atau 'telat'
             };
 
             const { error: insertError } = await supabaseClient.from('absensi').insert(attendanceData);
@@ -1183,13 +1615,151 @@
             if (insertError) {
                 showAlert('Gagal menyimpan absensi: ' + insertError.message);
             } else {
-                showAlert(`Absen ${currentAbsenType} berhasil!`);
+                // --- PESAN PERINGATAN TELAT ---
+                let pesanSukses = `Absen ${currentAbsenType} berhasil!`;
+                if (status === 'telat') {
+                    pesanSukses += `\n\nPERINGATAN: Anda tercatat TERLAMBAT!`;
+                }
+                showAlert(pesanSukses);
+                // --- END PESAN PERINGATAN ---
+                
                 closeCameraModal();
                 // Refresh dashboard view after successful attendance
                 renderDashboard(currentUser.role, currentUser.name);
             }
         });
         closeCameraBtn.addEventListener('click', closeCameraModal);
+        
+        // --- LOGIKA DOWNLOAD LAPORAN (PDF/EXCEL) ---
+        
+        // Fungsi helper untuk mengambil data rekap bulanan
+        // Jika kelas = null, ambil semua. Jika kelas diisi, filter per kelas
+        const fetchRekapBulananData = async (kelas = null) => {
+            const { firstDay, lastDay } = getMonthDateRange();
+            
+            // 1. Ambil semua siswa (filter per kelas jika ada)
+            let siswaQuery = supabaseClient.from('siswa').select('name, kelas');
+            if (kelas) {
+                siswaQuery = siswaQuery.eq('kelas', kelas);
+            }
+            const { data: semuaSiswa, error: siswaError } = await siswaQuery;
+            if (siswaError) {
+                showAlert('Gagal mengambil data siswa: ' + siswaError.message);
+                return [];
+            }
+            
+            // 2. Ambil semua data absensi bulan ini
+            const { data: absensiData, error: absensiError } = await supabaseClient.from('absensi')
+                .select('user_name, status')
+                .eq('type', 'masuk')
+                .gte('attendance_date', firstDay)
+                .lte('attendance_date', lastDay);
+
+            // 3. Ambil semua data izin bulan ini
+            const { data: izinData, error: izinError } = await supabaseClient.from('izin')
+                .select('siswa_name, type')
+                .eq('status', 'disetujui')
+                .gte('created_at', firstDay)
+                .lte('created_at', lastDay);
+                
+            // 4. Proses data (TODO: Optimalkan ini untuk performa)
+            const rekapMap = new Map();
+            
+            // Inisialisasi map
+            (semuaSiswa || []).forEach(siswa => {
+                rekapMap.set(siswa.name, {
+                    name: siswa.name,
+                    kelas: siswa.kelas,
+                    hadir: 0,
+                    sakit: 0,
+                    izin: 0,
+                    alpa: 0, // TODO: Hitung alpa (kompleks)
+                    telat: 0
+                });
+            });
+            
+            // Hitung absensi & telat
+            (absensiData || []).forEach(absen => {
+                if (rekapMap.has(absen.user_name)) {
+                    const data = rekapMap.get(absen.user_name);
+                    data.hadir++;
+                    if (absen.status === 'telat') {
+                        data.telat++;
+                    }
+                }
+            });
+            
+            // Hitung izin & sakit
+            (izinData || []).forEach(izin => {
+                if (rekapMap.has(izin.siswa_name)) {
+                    const data = rekapMap.get(izin.siswa_name);
+                    if (izin.type === 'Sakit') data.sakit++;
+                    else if (izin.type === 'Izin') data.izin++;
+                }
+            });
+            
+            return Array.from(rekapMap.values());
+        };
+        
+        const downloadRekapPDF = async (kelas = null) => {
+            const btn = document.getElementById(kelas ? 'btn-download-guru-pdf' : 'btn-admin-pdf');
+            const originalText = btn.innerHTML;
+            showLoader(btn);
+            
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF();
+            const rekapData = await fetchRekapBulananData(kelas);
+            
+            if (rekapData.length === 0) {
+                showAlert('Tidak ada data rekap untuk di-download.');
+                hideLoader(btn, originalText);
+                return;
+            }
+            
+            const title = kelas ? `Rekap Absensi Bulanan - ${kelas}` : 'Rekap Absensi Bulanan - Seluruh Sekolah';
+            const namaFile = kelas ? `rekap_${kelas.replace(' ', '_')}.pdf` : 'rekap_global.pdf';
+            const headers = [['Nama Siswa', 'Kelas', 'Hadir', 'Sakit', 'Izin', 'Alpa', 'Telat']];
+            const body = rekapData.map(d => [d.name, d.kelas, d.hadir, d.sakit, d.izin, d.alpa, d.telat]);
+            
+            doc.text(title, 14, 20);
+            doc.autoTable({
+                startY: 25,
+                head: headers,
+                body: body,
+                theme: 'grid'
+            });
+            
+            doc.save(namaFile);
+            hideLoader(btn, originalText);
+        };
+
+        const downloadRekapExcel = async (kelas = null) => {
+            const btn = document.getElementById(kelas ? 'btn-download-guru-excel' : 'btn-admin-excel');
+            const originalText = btn.innerHTML;
+            showLoader(btn);
+
+            const rekapData = await fetchRekapBulananData(kelas);
+            
+            if (rekapData.length === 0) {
+                showAlert('Tidak ada data rekap untuk di-download.');
+                hideLoader(btn, originalText);
+                return;
+            }
+            
+            const namaFile = kelas ? `rekap_${kelas.replace(' ', '_')}.xlsx` : 'rekap_global.xlsx';
+
+            const ws = XLSX.utils.json_to_sheet(rekapData, {
+                header: ['name', 'kelas', 'hadir', 'sakit', 'izin', 'alpa', 'telat']
+            });
+            // Ganti nama header
+            XLSX.utils.sheet_add_aoa(ws, [['Nama Siswa', 'Kelas', 'Hadir', 'Sakit', 'Izin', 'Alpa', 'Telat']], { origin: 'A1' });
+
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, 'Rekap Absensi');
+            XLSX.writeFile(wb, namaFile);
+            
+            hideLoader(btn, originalText);
+        };
         
         // --- EVENT LISTENERS ---
         roleSelect.addEventListener('change', (e) => switchRoleView(e.target.value));
@@ -1214,6 +1784,8 @@
             document.getElementById('adminUser').value = '';
             document.getElementById('adminPass').value = '';
             currentUser = {};
+            // Hapus semua subscriptions saat logout
+            supabaseClient.removeAllChannels();
         });
 
         // --- INITIALIZATION ---
@@ -1223,4 +1795,3 @@
     </script>
 </body>
 </html>
-
